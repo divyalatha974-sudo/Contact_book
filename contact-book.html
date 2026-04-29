@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Book</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14; --surface: #161a24; --surface2: #1e2332;
+    --border: #2a3045; --accent: #4fffb0; --accent2: #7b6fff;
+    --red: #ff4f6a; --yellow: #ffd166; --text: #e8eaf2; --muted: #6b7394; --card: #181d2a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px 80px; }
+  header { width: 100%; max-width: 480px; display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 28px; }
+  header h1 { font-family: 'Space Mono', monospace; font-size: 1.5rem; color: var(--accent); letter-spacing: -1px; }
+  .count-badge { font-family: 'Space Mono', monospace; font-size: .72rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); padding: 3px 10px; border-radius: 99px; }
+  .search-wrap { width: 100%; max-width: 480px; position: relative; margin-bottom: 18px; }
+  .search-wrap input { width: 100%; padding: 14px 18px 14px 46px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 14px; color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 1rem; outline: none; transition: border-color .2s; }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap .ico { position: absolute; left: 16px; top: 50%;
+    transform: translateY(-50%); font-size: 1.1rem; color: var(--muted); }
+  .add-btn { width: 100%; max-width: 480px; padding: 13px; background: var(--accent);
+    color: #0d0f14; border: none; border-radius: 14px;
+    font-family: 'Space Mono', monospace; font-size: .9rem; font-weight: 700;
+    cursor: pointer; margin-bottom: 24px; transition: transform .15s, box-shadow .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .add-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px #4fffb033; }
+  #contact-list { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 12px; }
+  .empty-msg { text-align: center; color: var(--muted);
+    font-family: 'Space Mono', monospace; font-size: .85rem;
+    padding: 48px 0; border: 1.5px dashed var(--border); border-radius: 16px; }
+  .contact-card { background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+    transition: border-color .2s, transform .15s; animation: slideIn .25s ease; }
+  .contact-card:hover { border-color: var(--accent2); transform: translateX(3px); }
+  @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .avatar { width: 46px; height: 46px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; }
+  .contact-info { flex: 1; min-width: 0; }
+  .contact-info .name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .contact-info .phone { font-family: 'Space Mono', monospace; font-size: .78rem; color: var(--accent); margin-top: 2px; }
+  .contact-info .email { font-size: .75rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .card-actions button { width: 34px; height: 34px; border: none; border-radius: 10px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; transition: transform .15s; }
+  .card-actions button:hover { transform: scale(1.15); }
+  .btn-dial { background: #1a2e1e; color: var(--accent); }
+  .btn-edit { background: #1f1e2e; color: var(--accent2); }
+  .btn-del  { background: #2e1a1e; color: var(--red); }
+  .overlay { position: fixed; inset: 0; background: #000a; backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .overlay.active { opacity: 1; pointer-events: all; }
+  .modal { background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 22px; padding: 28px 26px; width: 100%; max-width: 400px;
+    transform: translateY(20px); transition: transform .25s; }
+  .overlay.active .modal { transform: translateY(0); }
+  .modal h2 { font-family: 'Space Mono', monospace; font-size: 1.1rem; color: var(--accent); margin-bottom: 22px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 6px;
+    letter-spacing: .5px; text-transform: uppercase; }
+  .field input { width: 100%; padding: 12px 14px; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: 12px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: .95rem; outline: none; transition: border-color .2s; }
+  .field input:focus { border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel { flex: 1; padding: 12px; background: transparent;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    color: var(--muted); font-family: 'Space Mono', monospace; font-size: .82rem;
+    cursor: pointer; transition: border-color .2s; }
+  .btn-cancel:hover { border-color: var(--red); color: var(--red); }
+  .btn-save { flex: 2; padding: 12px; background: var(--accent); border: none;
+    border-radius: 12px; color: #0d0f14; font-family: 'Space Mono', monospace;
+    font-size: .82rem; font-weight: 700; cursor: pointer; transition: box-shadow .2s; }
+  .btn-save:hover { box-shadow: 0 4px 20px #4fffb040; }
+  .dial-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  .dial-display { background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 14px 18px;
+    font-family: 'Space Mono', monospace; font-size: 1.4rem;
+    color: var(--accent); text-align: center; margin: 18px 0 14px;
+    min-height: 56px; letter-spacing: 3px; word-break: break-all; }
+  .dialpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .dial-key { padding: 14px 0; border-radius: 14px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    color: var(--text); font-family: 'Space Mono', monospace;
+    font-size: 1.1rem; font-weight: 700; cursor: pointer;
+    transition: background .15s, border-color .15s, transform .1s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2; }
+  .dial-key sub { font-size: .55rem; color: var(--muted); letter-spacing: 1px; }
+  .dial-key:hover { background: var(--surface2); border-color: var(--accent2); transform: scale(.97); }
+  .dial-call { background: #1a2e1e !important; color: var(--accent) !important; font-size: 1.3rem !important; }
+  .dial-call:hover { background: #223d2b !important; border-color: var(--accent) !important; }
+  .dial-del-key { color: var(--red) !important; font-size: 1.2rem !important; }
+  .dial-del-key:hover { border-color: var(--red) !important; }
+  .del-msg { color: var(--muted); font-size: .92rem; margin-bottom: 20px; line-height: 1.5; }
+  .del-msg strong { color: var(--text); }
+  .btn-confirm-del { flex: 2; padding: 12px; background: var(--red); border: none;
+    border-radius: 12px; color: #fff; font-family: 'Space Mono', monospace;
+    font-size: .82rem; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📒 Contacts</h1>
+  <span id="count-badge" class="count-badge">0 saved</span>
+</header>
+
+<div class="search-wrap">
+  <span class="ico">🔍</span>
+  <input type="text" id="search-input" placeholder="Search name, phone or email…">
+</div>
+
+<button class="add-btn" onclick="openAdd()">＋ &nbsp;New Contact</button>
+
+<div id="contact-list"></div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="overlay" id="form-modal">
+  <div class="modal">
+    <h2 id="form-title">New Contact</h2>
+    <div class="field"><label>Full Name</label><input id="f-name" placeholder="e.g. Ada Lovelace"></div>
+    <div class="field"><label>Phone Number</label><input id="f-phone" placeholder="+1 234 567 8900" type="tel"></div>
+    <div class="field"><label>Email Address</label><input id="f-email" placeholder="ada@example.com" type="email"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('form-modal')">Cancel</button>
+      <button class="btn-save" onclick="saveContact()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIAL PAD MODAL -->
+<div class="overlay" id="dial-modal">
+  <div class="modal">
+    <h2>📞 Dial Pad</h2>
+    <div class="dial-name" id="dial-contact-name"></div>
+    <div class="dial-display" id="dial-display">–</div>
+    <div class="dialpad" id="dialpad"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('dial-modal')">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="overlay" id="del-modal">
+  <div class="modal">
+    <h2>🗑 Delete Contact</h2>
+    <p class="del-msg">Are you sure you want to delete <strong id="del-name"></strong>? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('del-modal')">Cancel</button>
+      <button class="btn-confirm-del" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let contacts = JSON.parse(localStorage.getItem('cb_contacts') || 'null') || [];
+  let editId = null, deleteId = null, dialNumber = '';
+
+  function save() { localStorage.setItem('cb_contacts', JSON.stringify(contacts)); }
+
+  const COLORS = [
+    ['#4fffb022','#4fffb0'],['#7b6fff22','#7b6fff'],['#ff4f6a22','#ff4f6a'],
+    ['#ffd16622','#ffd166'],['#06d6a022','#06d6a0'],['#ef476f22','#ef476f'],
+  ];
+  function avatarColor(id) { return COLORS[Math.abs(id) % COLORS.length]; }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function render(list) {
+    const el = document.getElementById('contact-list');
+    document.getElementById('count-badge').textContent = contacts.length + ' saved';
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-msg">📭 No contacts found</div>'; return;
+    }
+    el.innerHTML = list.map(c => {
+      const [bg, fg] = avatarColor(c.id);
+      const initials = c.name.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      return `<div class="contact-card">
+        <div class="avatar" style="background:${bg};color:${fg}">${initials}</div>
+        <div class="contact-info">
+          <div class="name">${esc(c.name)}</div>
+          <div class="phone">${esc(c.phone)}</div>
+          <div class="email">${esc(c.email)}</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-dial" onclick="openDial(${c.id})" title="Dial">📞</button>
+          <button class="btn-edit" onclick="openEdit(${c.id})" title="Edit">✏️</button>
+          <button class="btn-del"  onclick="openDelete(${c.id})" title="Delete">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function filtered() {
+    const q = document.getElementById('search-input').value.toLowerCase().trim();
+    if (!q) return contacts;
+    return contacts.filter(c =>
+      c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.email.toLowerCase().includes(q)
+    );
+  }
+
+  document.getElementById('search-input').addEventListener('input', () => render(filtered()));
+
+  function openAdd() {
+    editId = null;
+    document.getElementById('form-title').textContent = '✨ New Contact';
+    ['f-name','f-phone','f-email'].forEach(id => document.getElementById(id).value = '');
+    openModal('form-modal');
+    setTimeout(() => document.getElementById('f-name').focus(), 250);
+  }
+
+  function openEdit(id) {
+    const c = contacts.find(x => x.id === id); if (!c) return;
+    editId = id;
+    document.getElementById('form-title').textContent = '✏️ Edit Contact';
+    document.getElementById('f-name').value = c.name;
+    document.getElementById('f-phone').value = c.phone;
+    document.getElementById('f-email').value = c.email;
+    openModal('form-modal');
+    setTimeout(() => document.getElementById('f-name').focus(), 250);
+  }
+
+  function saveContact() {
+    const name  = document.getElementById('f-name').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    if (!name || !phone) { alert('Name and phone number are required.'); return; }
+    if (editId !== null) {
+      const c = contacts.find(x => x.id === editId);
+      c.name = name; c.phone = phone; c.email = email;
+    } else {
+      contacts.push({ id: Date.now(), name, phone, email });
+    }
+    save(); closeModal('form-modal'); render(filtered());
+  }
+
+  function openDelete(id) {
+    deleteId = id;
+    const c = contacts.find(x => x.id === id);
+    document.getElementById('del-name').textContent = c ? c.name : '';
+    openModal('del-modal');
+  }
+
+  function confirmDelete() {
+    contacts = contacts.filter(c => c.id !== deleteId);
+    save(); closeModal('del-modal'); render(filtered());
+  }
+
+  const KEYS = [
+    {d:'1',s:''},{d:'2',s:'ABC'},{d:'3',s:'DEF'},
+    {d:'4',s:'GHI'},{d:'5',s:'JKL'},{d:'6',s:'MNO'},
+    {d:'7',s:'PQRS'},{d:'8',s:'TUV'},{d:'9',s:'WXYZ'},
+    {d:'*',s:''},{d:'0',s:'+'},{d:'#',s:''},
+  ];
+
+  function buildDialpad() {
+    const pad = document.getElementById('dialpad');
+    pad.innerHTML = KEYS.map(k =>
+      `<button class="dial-key" onclick="dialPress('${k.d}')">${k.d}<sub>${k.s}</sub></button>`
+    ).join('') +
+    `<button class="dial-key dial-call" onclick="dialCall()" title="Call">📞</button>` +
+    `<button class="dial-key dial-del-key" onclick="dialBackspace()" title="Backspace">⌫</button>`;
+  }
+
+  function openDial(id) {
+    const c = contacts.find(x => x.id === id); if (!c) return;
+    dialNumber = c.phone;
+    document.getElementById('dial-contact-name').textContent = c.name;
+    document.getElementById('dial-display').textContent = dialNumber || '–';
+    buildDialpad(); openModal('dial-modal');
+  }
+
+  function dialPress(d) {
+    dialNumber += d;
+    document.getElementById('dial-display').textContent = dialNumber;
+  }
+
+  function dialBackspace() {
+    dialNumber = dialNumber.slice(0,-1);
+    document.getElementById('dial-display').textContent = dialNumber || '–';
+  }
+
+  function dialCall() {
+    if (!dialNumber) return;
+    window.location.href = 'tel:' + dialNumber.replace(/\s/g,'');
+  }
+
+  function openModal(id)  { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  document.querySelectorAll('.overlay').forEach(o =>
+    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); })
+  );
+
+  // Seed demo contacts if empty
+  if (!contacts.length) {
+    contacts = [
+      { id: 1, name: 'Mam', phone: '+91 98765 43210', email: 'mam@home.in' },
+      { id: 2, name: 'Dad', phone: '+91 87654 32109', email: 'dad@home.in' },
+      { id: 3, name: 'Best Friend', phone: '+91 76543 21098', email: 'friend@gmail.com' },
+    ];
+    save();
+  }
+  render(filtered());
+</script>
+</body>
+</html>
