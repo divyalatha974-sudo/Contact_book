@@ -7,13 +7,8 @@
 
 ## 🌐 Live Demo
 
-👉 **[Open ContactBook App](https://yourusername.github.io/contact-book)**
+👉 **[Open ContactBook App](https://github.com/divyalatha974-sudo/Contact_book)
 
-> Replace `yourusername` with your actual GitHub username
-
----
-
-## ✨ Features
 
 ### 👥 Contacts Tab
 | Feature | Description |
@@ -76,7 +71,7 @@
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/contact-book.git
+git clone https://github.com/divyalatha974-sudo/Contact_book
 ```
 
 2. Open `index.html` in any browser — done! ✅
