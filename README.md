@@ -7,7 +7,7 @@
 
 ## 🌐 Live Demo
 
-👉 **[Open ContactBook App](https://github.com/divyalatha974-sudo/Contact_book)
+👉 **[Open ContactBook App](https://divyalatha974-sudo.github.io/Contact_book)
 
 
 ### 👥 Contacts Tab
