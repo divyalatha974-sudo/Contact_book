@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Book</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ───────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #07090f;
+  --glow:     #4fffb0;
+  --glow2:    #7b6fff;
+  --red:      #ff4f72;
+  --yellow:   #ffd166;
+  --surface:  rgba(255,255,255,0.04);
+  --surface2: rgba(255,255,255,0.07);
+  --border:   rgba(255,255,255,0.08);
+  --border2:  rgba(79,255,176,0.25);
+  --text:     #f0f2ff;
+  --muted:    #6b7599;
+  --card:     rgba(255,255,255,0.035);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-x: hidden;
+}
+
+/* Animated background blobs */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(79,255,176,0.08) 0%, transparent 70%);
+  top: -100px; left: -100px;
+  animation: blob1 8s ease-in-out infinite alternate;
+}
+body::after {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(123,111,255,0.07) 0%, transparent 70%);
+  bottom: -80px; right: -80px;
+  animation: blob2 10s ease-in-out infinite alternate;
+}
+@keyframes blob1 { to { transform: translate(60px,40px); } }
+@keyframes blob2 { to { transform: translate(-50px,-30px); } }
+
+/* ── App Shell ──────────────────────────────────────── */
+.app {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 460px;
+  background: rgba(15,18,30,0.85);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(79,255,176,0.05),
+    0 32px 80px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+/* ── Top Brand Bar ──────────────────────────────────── */
+.brand-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 0;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+}
+.brand-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, #4fffb022, #7b6fff22);
+  border: 1px solid rgba(79,255,176,0.2);
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.brand-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .95rem; font-weight: 600;
+  background: linear-gradient(90deg, #4fffb0, #7b6fff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.count-pill {
+  font-family: 'JetBrains Mono', monospace; font-size: .68rem;
+  padding: 4px 12px; border-radius: 99px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* ── Tabs ───────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 6px;
+  margin: 18px 24px 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 5px;
+}
+.tab {
+  flex: 1; padding: 9px 0; border: none; border-radius: 10px;
+  background: transparent; color: var(--muted);
+  font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 500;
+  cursor: pointer; transition: all .22s; letter-spacing: .2px;
+}
+.tab.active {
+  background: linear-gradient(135deg, rgba(79,255,176,0.18), rgba(123,111,255,0.12));
+  color: var(--glow); font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(79,255,176,0.2), inset 0 1px 0 rgba(79,255,176,0.1);
+}
+
+/* ── Scrollable Content Area ────────────────────────── */
+.content {
+  padding: 18px 24px 24px;
+  max-height: 520px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79,255,176,0.2) transparent;
+}
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-thumb { background: rgba(79,255,176,0.2); border-radius: 99px; }
+
+/* ── Views ──────────────────────────────────────────── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── Search ─────────────────────────────────────────── */
+.search-wrap { position: relative; margin-bottom: 14px; }
+.search-wrap input {
+  width: 100%; padding: 12px 16px 12px 42px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text);
+  font-family: 'Inter', sans-serif; font-size: .9rem;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+  caret-color: var(--glow);
+}
+.search-wrap input::placeholder { color: var(--muted); }
+.search-wrap input:focus {
+  border-color: rgba(79,255,176,0.35);
+  box-shadow: 0 0 0 3px rgba(79,255,176,0.07);
+}
+.search-ico {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-50%); color: var(--muted); font-size: .9rem; pointer-events: none;
+}
+
+/* ── Add Button ─────────────────────────────────────── */
+.add-btn {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, rgba(79,255,176,0.15), rgba(123,111,255,0.1));
+  border: 1px solid rgba(79,255,176,0.25);
+  border-radius: 12px; color: var(--glow);
+  font-family: 'Inter', sans-serif; font-size: .88rem; font-weight: 600;
+  cursor: pointer; margin-bottom: 18px; letter-spacing: .3px;
+  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.add-btn:hover {
+  background: linear-gradient(135deg, rgba(79,255,176,0.22), rgba(123,111,255,0.16));
+  box-shadow: 0 4px 20px rgba(79,255,176,0.12);
+  transform: translateY(-1px);
+}
+
+/* ── Section Label ──────────────────────────────────── */
+.section-label {
+  font-size: .68rem; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+  padding-left: 2px;
+}
+
+/* ── Contact Cards ──────────────────────────────────── */
+#contact-list { display: flex; flex-direction: column; gap: 8px; }
+
+.empty-state {
+  text-align: center; padding: 40px 0;
+  border: 1px dashed rgba(255,255,255,0.07); border-radius: 16px;
+}
+.empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.empty-text { color: var(--muted); font-size: .82rem; }
+
+.contact-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 13px 14px;
+  display: flex; align-items: center; gap: 12px;
+  transition: all .2s;
+  animation: fadeUp .2s ease;
+  cursor: default;
+}
+.contact-card:hover {
+  background: var(--surface);
+  border-color: rgba(79,255,176,0.15);
+  transform: translateX(2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+.avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: .9rem;
+}
+.c-info { flex: 1; min-width: 0; }
+.c-name {
+  font-size: .92rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+}
+.c-phone {
+  font-family: 'JetBrains Mono', monospace; font-size: .72rem;
+  color: var(--glow); opacity: .85;
+}
+.c-email {
+  font-size: .7rem; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
+}
+.c-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.c-actions button {
+  width: 30px; height: 30px; border: none; border-radius: 8px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; transition: transform .15s, box-shadow .15s;
+}
+.c-actions button:hover { transform: scale(1.15); }
+.btn-edit { background: rgba(123,111,255,0.15); color: var(--glow2); }
+.btn-del  { background: rgba(255,79,114,0.12); color: var(--red); }
+
+/* ── Dial Pad ───────────────────────────────────────── */
+.dial-screen {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px 18px 14px;
+  margin-bottom: 16px; text-align: center;
+}
+.dial-input {
+  width: 100%; background: transparent; border: none; outline: none;
+  font-family: 'JetBrains Mono', monospace; font-size: 1.9rem; font-weight: 600;
+  color: var(--glow); text-align: center; letter-spacing: 5px;
+  caret-color: var(--glow); padding: 4px 0;
+}
+.dial-input::placeholder { color: rgba(79,255,176,0.2); letter-spacing: 2px; }
+.dial-hint {
+  font-size: .78rem; color: var(--muted); margin-top: 6px;
+  min-height: 18px; font-style: italic; letter-spacing: .3px;
+}
+
+#suggestions { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.suggestion {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 11px; padding: 9px 13px;
+  display: flex; align-items: center; gap: 11px;
+  cursor: pointer; transition: all .18s; animation: fadeUp .18s ease;
+}
+.suggestion:hover { border-color: rgba(79,255,176,0.3); background: var(--surface); }
+.sug-av {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: .75rem;
+}
+.sug-name { font-size: .86rem; font-weight: 600; }
+.sug-phone { font-family: 'JetBrains Mono', monospace; font-size: .7rem; color: var(--glow); }
+.sug-call { margin-left: auto; font-size: 1rem; color: var(--glow); opacity: .7; }
+
+.keypad {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;
+}
+.key {
+  padding: 15px 0; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font-family: 'JetBrains Mono', monospace;
+  font-size: 1.15rem; font-weight: 600; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  line-height: 1.15; transition: all .12s; user-select: none;
+}
+.key:hover { background: var(--surface2); border-color: rgba(79,255,176,0.2); }
+.key:active { transform: scale(.93); background: rgba(79,255,176,0.08); }
+.key sub { font-size: .46rem; color: var(--muted); letter-spacing: 2px; margin-top: 2px; font-family: 'Inter', sans-serif; }
+
+.dial-bottom { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; }
+.key-clear {
+  font-size: .7rem; font-family: 'Inter', sans-serif; color: var(--muted);
+  letter-spacing: .5px; font-weight: 500;
+}
+.key-call {
+  background: linear-gradient(135deg, rgba(79,255,176,0.2), rgba(79,255,176,0.08));
+  border-color: rgba(79,255,176,0.3); color: var(--glow); font-size: 1.3rem;
+}
+.key-call:hover {
+  background: linear-gradient(135deg, rgba(79,255,176,0.3), rgba(79,255,176,0.14));
+  box-shadow: 0 0 20px rgba(79,255,176,0.15);
+}
+.key-back { color: var(--red); font-size: 1.1rem; }
+
+/* ── Modals ─────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity .22s;
+}
+.overlay.active { opacity: 1; pointer-events: all; }
+.modal {
+  background: #0f1220;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px; padding: 28px 26px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05);
+  transform: translateY(18px) scale(.98); transition: transform .25s;
+}
+.overlay.active .modal { transform: translateY(0) scale(1); }
+
+.modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+.modal-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(79,255,176,0.12), rgba(123,111,255,0.08));
+  border: 1px solid rgba(79,255,176,0.15);
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.modal h2 { font-size: 1rem; font-weight: 600; color: var(--text); }
+
+.field { margin-bottom: 14px; }
+.field label {
+  display: block; font-size: .7rem; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.field input {
+  width: 100%; padding: 11px 14px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: 'Inter', sans-serif; font-size: .9rem; outline: none;
+  transition: border-color .2s, box-shadow .2s; caret-color: var(--glow);
+}
+.field input::placeholder { color: var(--muted); }
+.field input:focus { border-color: rgba(79,255,176,0.35); box-shadow: 0 0 0 3px rgba(79,255,176,0.07); }
+
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.m-cancel {
+  flex: 1; padding: 11px; background: transparent;
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--muted); font-family: 'Inter', sans-serif; font-size: .85rem; font-weight: 500;
+  cursor: pointer; transition: all .2s;
+}
+.m-cancel:hover { border-color: var(--red); color: var(--red); }
+.m-save {
+  flex: 2; padding: 11px;
+  background: linear-gradient(135deg, rgba(79,255,176,0.2), rgba(123,111,255,0.12));
+  border: 1px solid rgba(79,255,176,0.3); border-radius: 10px;
+  color: var(--glow); font-family: 'Inter', sans-serif; font-size: .85rem; font-weight: 600;
+  cursor: pointer; transition: all .2s; letter-spacing: .3px;
+}
+.m-save:hover { box-shadow: 0 4px 20px rgba(79,255,176,0.15); }
+.m-del {
+  flex: 2; padding: 11px;
+  background: rgba(255,79,114,0.12); border: 1px solid rgba(255,79,114,0.25);
+  border-radius: 10px; color: var(--red);
+  font-family: 'Inter', sans-serif; font-size: .85rem; font-weight: 600; cursor: pointer;
+  transition: all .2s;
+}
+.m-del:hover { background: rgba(255,79,114,0.2); box-shadow: 0 4px 16px rgba(255,79,114,0.15); }
+
+.del-body { color: var(--muted); font-size: .88rem; line-height: 1.6; margin-bottom: 4px; }
+.del-body strong { color: var(--text); font-weight: 600; }
+
+/* ── Divider ─────────────────────────────────────────── */
+.divider {
+  height: 1px; background: var(--border); margin: 0 24px;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Brand Bar -->
+  <div class="brand-bar">
+    <div class="brand">
+      <div class="brand-icon">📒</div>
+      <span class="brand-name">ContactBook</span>
+    </div>
+    <span id="count-pill" class="count-pill">0 contacts</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" style="margin:16px 24px 0;">
+    <button class="tab active" onclick="switchTab('contacts')">👥 &nbsp;Contacts</button>
+    <button class="tab" onclick="switchTab('dialpad')">📞 &nbsp;Dial Pad</button>
+  </div>
+
+  <div class="divider" style="margin-top:16px;"></div>
+
+  <!-- ── CONTACTS VIEW ── -->
+  <div class="content view active" id="view-contacts">
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input type="text" id="search-input" placeholder="Search name, phone or email…">
+    </div>
+    <button class="add-btn" onclick="openAdd()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Add New Contact
+    </button>
+    <div class="section-label" id="section-label">All Contacts</div>
+    <div id="contact-list"></div>
+  </div>
+
+  <!-- ── DIAL PAD VIEW ── -->
+  <div class="content view" id="view-dialpad">
+    <div class="dial-screen">
+      <input type="tel" id="dial-number" class="dial-input" placeholder="– – –" autocomplete="off">
+      <div class="dial-hint" id="dial-hint"></div>
+    </div>
+    <div id="suggestions"></div>
+    <div class="keypad" id="keypad"></div>
+    <div class="dial-bottom">
+      <button class="key key-clear" onclick="dialClear()">CLEAR</button>
+      <button class="key key-call" onclick="dialCall()">📞</button>
+      <button class="key key-back" onclick="dialBack()">⌫</button>
+    </div>
+  </div>
+
+</div><!-- /.app -->
+
+<!-- ADD / EDIT MODAL -->
+<div class="overlay" id="form-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon" id="form-icon">✨</div>
+      <h2 id="form-title">New Contact</h2>
+    </div>
+    <div class="field"><label>Full Name</label><input id="f-name" placeholder="e.g. Priya Sharma"></div>
+    <div class="field"><label>Phone Number</label><input id="f-phone" placeholder="+91 98765 43210" type="tel"></div>
+    <div class="field"><label>Email Address</label><input id="f-email" placeholder="priya@example.com" type="email"></div>
+    <div class="modal-actions">
+      <button class="m-cancel" onclick="closeModal('form-modal')">Cancel</button>
+      <button class="m-save" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="overlay" id="del-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:rgba(255,79,114,0.1);border-color:rgba(255,79,114,0.2)">🗑️</div>
+      <h2>Delete Contact</h2>
+    </div>
+    <p class="del-body">Are you sure you want to permanently delete <strong id="del-name"></strong>? This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="m-cancel" onclick="closeModal('del-modal')">Cancel</button>
+      <button class="m-del" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────
+let contacts = JSON.parse(localStorage.getItem('cb3_contacts') || 'null') || [];
+let editId = null, deleteId = null, dialStr = '';
+
+function save() { localStorage.setItem('cb3_contacts', JSON.stringify(contacts)); }
+
+// ── Avatar palette ────────────────────────────────────
+const PAL = [
+  ['rgba(79,255,176,0.12)','#4fffb0'],
+  ['rgba(123,111,255,0.12)','#8b82ff'],
+  ['rgba(255,79,114,0.12)','#ff4f72'],
+  ['rgba(255,209,102,0.12)','#ffd166'],
+  ['rgba(6,214,160,0.12)','#06d6a0'],
+  ['rgba(255,138,80,0.12)','#ff8a50'],
+];
+const pal = id => PAL[Math.abs(id) % PAL.length];
+const ini = n => n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// ── Tab switching ─────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) =>
+    t.classList.toggle('active', (i===0&&tab==='contacts')||(i===1&&tab==='dialpad'))
+  );
+  document.getElementById('view-contacts').classList.toggle('active', tab==='contacts');
+  document.getElementById('view-dialpad').classList.toggle('active', tab==='dialpad');
+  if (tab==='dialpad') setTimeout(()=>{
+    const inp = document.getElementById('dial-number');
+    inp.removeAttribute('readonly'); inp.focus();
+  }, 120);
+}
+
+// ── Render contacts ───────────────────────────────────
+function filtered() {
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  if (!q) return contacts;
+  return contacts.filter(c =>
+    c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.email.toLowerCase().includes(q)
+  );
+}
+
+function render(list) {
+  const pill = document.getElementById('count-pill');
+  const lbl  = document.getElementById('section-label');
+  const el   = document.getElementById('contact-list');
+  pill.textContent = contacts.length + (contacts.length===1?' contact':' contacts');
+
+  const q = document.getElementById('search-input').value.trim();
+  lbl.textContent = q ? `${list.length} result${list.length!==1?'s':''} found` : 'All Contacts';
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">${q?'🔍':'📭'}</div>
+      <div class="empty-text">${q?'No contacts match your search':'No contacts yet — add one!'}</div>
+    </div>`; return;
+  }
+  el.innerHTML = list.map(c => {
+    const [bg,fg] = pal(c.id);
+    return `<div class="contact-card">
+      <div class="avatar" style="background:${bg};color:${fg};border:1px solid ${fg}22">${ini(c.name)}</div>
+      <div class="c-info">
+        <div class="c-name">${esc(c.name)}</div>
+        <div class="c-phone">${esc(c.phone)}</div>
+        <div class="c-email">${esc(c.email)}</div>
+      </div>
+      <div class="c-actions">
+        <button class="btn-edit" onclick="openEdit(${c.id})" title="Edit">✏️</button>
+        <button class="btn-del"  onclick="openDelete(${c.id})" title="Delete">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('search-input').addEventListener('input', ()=>render(filtered()));
+
+// ── Add / Edit ────────────────────────────────────────
+function openAdd() {
+  editId = null;
+  document.getElementById('form-icon').textContent = '✨';
+  document.getElementById('form-title').textContent = 'New Contact';
+  ['f-name','f-phone','f-email'].forEach(id => document.getElementById(id).value='');
+  openModal('form-modal');
+  setTimeout(()=>document.getElementById('f-name').focus(), 250);
+}
+
+function openEdit(id) {
+  const c = contacts.find(x=>x.id===id); if(!c) return;
+  editId = id;
+  document.getElementById('form-icon').textContent = '✏️';
+  document.getElementById('form-title').textContent = 'Edit Contact';
+  document.getElementById('f-name').value  = c.name;
+  document.getElementById('f-phone').value = c.phone;
+  document.getElementById('f-email').value = c.email;
+  openModal('form-modal');
+  setTimeout(()=>document.getElementById('f-name').focus(), 250);
+}
+
+function saveContact() {
+  const name  = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  if (!name||!phone) { alert('Name and phone number are required.'); return; }
+  if (editId!==null) {
+    const c = contacts.find(x=>x.id===editId);
+    c.name=name; c.phone=phone; c.email=email;
+  } else {
+    contacts.push({id:Date.now(), name, phone, email});
+  }
+  save(); closeModal('form-modal'); render(filtered());
+}
+
+// ── Delete ────────────────────────────────────────────
+function openDelete(id) {
+  deleteId = id;
+  const c = contacts.find(x=>x.id===id);
+  document.getElementById('del-name').textContent = c?c.name:'';
+  openModal('del-modal');
+}
+function confirmDelete() {
+  contacts = contacts.filter(c=>c.id!==deleteId);
+  save(); closeModal('del-modal'); render(filtered());
+}
+
+// ── Dial Pad ──────────────────────────────────────────
+const KEYS = [
+  {d:'1',s:''},{d:'2',s:'ABC'},{d:'3',s:'DEF'},
+  {d:'4',s:'GHI'},{d:'5',s:'JKL'},{d:'6',s:'MNO'},
+  {d:'7',s:'PQRS'},{d:'8',s:'TUV'},{d:'9',s:'WXYZ'},
+  {d:'*',s:''},{d:'0',s:'+'},{d:'#',s:''},
+];
+
+function buildKeypad() {
+  document.getElementById('keypad').innerHTML = KEYS.map(k =>
+    `<button class="key" onclick="dialPress('${k.d}')">${k.d}<sub>${k.s}</sub></button>`
+  ).join('');
+}
+
+function updateDial() {
+  const inp  = document.getElementById('dial-number');
+  const hint = document.getElementById('dial-hint');
+  const sug  = document.getElementById('suggestions');
+  inp.value  = dialStr;
+  if (!dialStr) { hint.textContent=''; sug.innerHTML=''; return; }
+
+  const stripped = dialStr.replace(/\D/g,'');
+  const matches  = contacts.filter(c => c.phone.replace(/\D/g,'').includes(stripped));
+
+  hint.textContent = matches.length===1 ? matches[0].name
+    : matches.length>1 ? `${matches.length} contacts match` : '';
+
+  sug.innerHTML = matches.slice(0,3).map(c => {
+    const [bg,fg] = pal(c.id);
+    return `<div class="suggestion" onclick="selectSug(${c.id})">
+      <div class="sug-av" style="background:${bg};color:${fg}">${ini(c.name)}</div>
+      <div><div class="sug-name">${esc(c.name)}</div><div class="sug-phone">${esc(c.phone)}</div></div>
+      <span class="sug-call">📞</span>
+    </div>`;
+  }).join('');
+}
+
+function dialPress(d) {
+  if (dialStr.length>=15) return;
+  const inp = document.getElementById('dial-number');
+  const pos = inp.selectionStart ?? dialStr.length;
+  dialStr = dialStr.slice(0,pos) + d + dialStr.slice(pos);
+  updateDial();
+  requestAnimationFrame(()=>{ inp.focus(); inp.setSelectionRange(pos+1,pos+1); });
+}
+function dialBack() {
+  const inp = document.getElementById('dial-number');
+  const pos = inp.selectionStart ?? dialStr.length;
+  if (!pos) return;
+  dialStr = dialStr.slice(0,pos-1) + dialStr.slice(pos);
+  updateDial();
+  requestAnimationFrame(()=>{ inp.focus(); inp.setSelectionRange(pos-1,pos-1); });
+}
+function dialClear() {
+  dialStr=''; updateDial();
+  document.getElementById('dial-number').focus();
+}
+function dialCall() {
+  if (!dialStr) return;
+  window.location.href='tel:'+dialStr.replace(/\s/g,'');
+}
+function selectSug(id) {
+  const c = contacts.find(x=>x.id===id); if(!c) return;
+  dialStr = c.phone.replace(/\s/g,'');
+  updateDial();
+  const inp = document.getElementById('dial-number');
+  requestAnimationFrame(()=>{ inp.focus(); inp.setSelectionRange(dialStr.length,dialStr.length); });
+}
+
+// ── Modals ────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('active'); })
+);
+
+// ── Init ──────────────────────────────────────────────
+if (!contacts.length) {
+  contacts = [
+    {id:1, name:'Mam',         phone:'+919876543210', email:'mam@home.in'},
+    {id:2, name:'Dad',         phone:'+918765432109', email:'dad@home.in'},
+    {id:3, name:'Best Friend', phone:'+917654321098', email:'friend@gmail.com'},
+  ];
+  save();
+}
+buildKeypad();
+updateDial();
+render(filtered());
+</script>
+</body>
+</html>
